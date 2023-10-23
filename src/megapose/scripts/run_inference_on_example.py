@@ -36,25 +36,30 @@ logger = get_logger(__name__)
 def load_observation(
     example_dir: Path,
     load_depth: bool = False,
+    filename_header: str = "image",
 ) -> Tuple[np.ndarray, Union[None, np.ndarray], CameraData]:
     camera_data = CameraData.from_json((example_dir / "camera_data.json").read_text())
 
-    rgb = np.array(Image.open(example_dir / "image_rgb.png"), dtype=np.uint8)
+    rgb = np.array(Image.open(example_dir / "_".join([filename_header, "rgb.png"])), dtype=np.uint8)
     assert rgb.shape[:2] == camera_data.resolution
 
     depth = None
     if load_depth:
-        depth = np.array(Image.open(example_dir / "image_depth.png"), dtype=np.float32) / 1000
+        depth = (
+            np.array(
+                Image.open(example_dir / "_".join([filename_header, "depth.png"])), dtype=np.float32
+            )
+            / 1000
+        )
         assert depth.shape[:2] == camera_data.resolution
 
     return rgb, depth, camera_data
 
 
 def load_observation_tensor(
-    example_dir: Path,
-    load_depth: bool = False,
+    example_dir: Path, load_depth: bool = False, filename_header: str = "image"
 ) -> ObservationTensor:
-    rgb, depth, camera_data = load_observation(example_dir, load_depth)
+    rgb, depth, camera_data = load_observation(example_dir, load_depth, filename_header)
     observation = ObservationTensor.from_numpy(rgb, depth, camera_data.K)
     return observation
 
@@ -75,7 +80,7 @@ def load_detections(
 
 def make_object_dataset(example_dir: Path) -> RigidObjectDataset:
     rigid_objects = []
-    mesh_units = "mm"
+    mesh_units = "m"
     object_dirs = (example_dir / "meshes").iterdir()
     for object_dir in object_dirs:
         label = object_dir.name
@@ -91,10 +96,8 @@ def make_object_dataset(example_dir: Path) -> RigidObjectDataset:
     return rigid_object_dataset
 
 
-def make_detections_visualization(
-    example_dir: Path,
-) -> None:
-    rgb, _, _ = load_observation(example_dir, load_depth=False)
+def make_detections_visualization(example_dir: Path, filename_header: str = "image") -> None:
+    rgb, _, _ = load_observation(example_dir, load_depth=False, filename_header=filename_header)
     detections = load_detections(example_dir)
     plotter = BokehPlotter()
     fig_rgb = plotter.plot_image(rgb)
@@ -126,12 +129,12 @@ def save_predictions(
 def run_inference(
     example_dir: Path,
     model_name: str,
+    filename_header: str = "image",
 ) -> None:
-
     model_info = NAMED_MODELS[model_name]
 
     observation = load_observation_tensor(
-        example_dir, load_depth=model_info["requires_depth"]
+        example_dir, load_depth=model_info["requires_depth"], filename_header=filename_header
     ).cuda()
     detections = load_detections(example_dir).cuda()
     object_dataset = make_object_dataset(example_dir)
@@ -148,11 +151,10 @@ def run_inference(
     return
 
 
-def make_output_visualization(
-    example_dir: Path,
-) -> None:
-
-    rgb, _, camera_data = load_observation(example_dir, load_depth=False)
+def make_output_visualization(example_dir: Path, filename_header: str = "image") -> None:
+    rgb, _, camera_data = load_observation(
+        example_dir, load_depth=False, filename_header=filename_header
+    )
     camera_data.TWC = Transform(np.eye(4))
     object_datas = load_object_data(example_dir / "outputs" / "object_data.json")
     object_dataset = make_object_dataset(example_dir)
@@ -210,19 +212,20 @@ if __name__ == "__main__":
     set_logging_level("info")
     parser = argparse.ArgumentParser()
     parser.add_argument("example_name")
-    parser.add_argument("--model", type=str, default="megapose-1.0-RGB-multi-hypothesis")
+    parser.add_argument("--model", type=str, default="megapose-1.0-RGB-multi-hypothesis-icp")
     parser.add_argument("--vis-detections", action="store_true")
     parser.add_argument("--run-inference", action="store_true")
     parser.add_argument("--vis-outputs", action="store_true")
+    parser.add_argument("--filename-header", type=str, default="image")
     args = parser.parse_args()
 
     example_dir = LOCAL_DATA_DIR / "examples" / args.example_name
-
+    print("example_dir", example_dir)
     if args.vis_detections:
-        make_detections_visualization(example_dir)
+        make_detections_visualization(example_dir, args.filename_header)
 
     if args.run_inference:
-        run_inference(example_dir, args.model)
+        run_inference(example_dir, args.model, args.filename_header)
 
     if args.vis_outputs:
-        make_output_visualization(example_dir)
+        make_output_visualization(example_dir, args.filename_header)
