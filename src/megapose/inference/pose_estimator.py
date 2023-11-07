@@ -62,7 +62,6 @@ class PoseEstimator(torch.nn.Module):
         bsz_images: int = 256,
         SO3_grid_size: int = 576,
     ) -> None:
-
         super().__init__()
         self.coarse_model = coarse_model
         self.refiner_model = refiner_model
@@ -146,7 +145,7 @@ class PoseEstimator(torch.nn.Module):
 
         model_time = 0.0
 
-        for (batch_idx, (batch_ids,)) in enumerate(dl):
+        for batch_idx, (batch_ids,) in enumerate(dl):
             data_TCO_input_ = data_TCO_input[batch_ids]
             df_ = data_TCO_input_.infos
             TCO_input_ = data_TCO_input_.poses
@@ -222,7 +221,6 @@ class PoseEstimator(torch.nn.Module):
         cuda_timer: bool = False,
         return_debug_data: bool = False,
     ) -> Tuple[PoseEstimatesType, dict]:
-
         """Score the estimates using the coarse model.
 
 
@@ -375,7 +373,6 @@ class PoseEstimator(torch.nn.Module):
         TCO_init = []
 
         for (batch_ids,) in dl:
-
             # b = bsz_images
             df_ = df_hypotheses.iloc[batch_ids.cpu().numpy()]
 
@@ -540,7 +537,6 @@ class PoseEstimator(torch.nn.Module):
                 steps in the pipeline.
 
         """
-
         timing_str = ""
         timer = SimpleTimer()
         timer.start()
@@ -634,7 +630,6 @@ class PoseEstimator(torch.nn.Module):
         extra_data["refiner"] = {"preds": data_TCO_final_scored, "data": refiner_extra_data}
         extra_data["timing_str"] = timing_str
         extra_data["time"] = timer.elapsed()
-
         if run_depth_refiner:
             extra_data["depth_refiner"] = {"preds": data_TCO_depth_refiner}
 

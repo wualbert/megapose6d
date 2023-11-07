@@ -53,7 +53,6 @@ def load_named_model(
     n_workers: int = 4,
     bsz_images: int = 128,
 ) -> PoseEstimator:
-
     model = NAMED_MODELS[model_name]
 
     renderer_kwargs = {

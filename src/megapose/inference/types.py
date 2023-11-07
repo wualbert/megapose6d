@@ -141,7 +141,6 @@ class ObservationTensor:
         return self.images.shape[1]
 
     def is_valid(self) -> bool:
-
         if not self.images.ndim == 4:
             return False
 
@@ -221,7 +220,6 @@ class ObservationTensor:
 
         # [C,H,W]
         if depth is not None:
-
             if depth.ndim == 3:
                 depth.unsqueeze(1)
 
