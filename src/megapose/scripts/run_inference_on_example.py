@@ -11,6 +11,9 @@ from bokeh.io import export_png
 from bokeh.plotting import gridplot
 from PIL import Image
 
+# profiling
+from torch.profiler import ProfilerActivity, profile, record_function
+
 # MegaPose
 from megapose.config import LOCAL_DATA_DIR
 from megapose.datasets.object_dataset import RigidObject, RigidObjectDataset
@@ -142,9 +145,12 @@ def run_inference(
     pose_estimator = load_named_model(model_name, object_dataset).cuda()
 
     logger.info(f"Running inference.")
-    output, _ = pose_estimator.run_inference_pipeline(
-        observation, detections=detections, **model_info["inference_parameters"]
-    )
+    with profile(activities=[ProfilerActivity.CUDA], record_shapes=True) as prof:
+        with record_function("model_inference"):
+            output, _ = pose_estimator.run_inference_pipeline(
+                observation, detections=detections, **model_info["inference_parameters"]
+            )
+    print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=10))
 
     save_predictions(example_dir, output)
     return
