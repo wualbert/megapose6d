@@ -166,6 +166,7 @@ class Panda3dBatchRenderer:
 
         self._init_renderers(preload_cache)
         self._is_closed = False
+        self._num_threads = torch.get_num_threads()
 
     def make_scene_data(
         self,
@@ -308,6 +309,9 @@ class Panda3dBatchRenderer:
                 preload_labels = set(object_labels_split[n].tolist())
             else:
                 preload_labels = set()
+            # torch.set_num_threads(1) is a workaround to prevent some machines from hanging on share_memory_() calls. 
+            # See pytorch issue https://github.com/pytorch/pytorch/issues/58962
+            torch.set_num_threads(1)
             renderer_process = torch.multiprocessing.Process(
                 target=worker_loop,
                 kwargs=dict(
@@ -335,6 +339,8 @@ class Panda3dBatchRenderer:
         self._out_queue.close()
         self._is_closed = True
         logger.debug("Batch renderer is closed.")
+        # Reset the number of threads
+        torch.set_num_threads(self._num_threads)
 
     def __del__(self) -> None:
         self.stop()
