@@ -95,6 +95,14 @@ def make_object_dataset(example_dir: Path, mesh_units: str = "m") -> RigidObject
     return rigid_object_dataset
 
 
+def make_tml_object_dataset(mesh_path: Path, label:str, mesh_units: str = "m") -> RigidObjectDataset:
+    rigid_objects = []
+    rigid_objects.append(RigidObject(label=label, mesh_path=mesh_path, mesh_units=mesh_units))
+        # TODO: fix mesh units
+    rigid_object_dataset = RigidObjectDataset(rigid_objects)
+    return rigid_object_dataset
+
+
 def make_detections_visualization(example_dir: Path, filename_header: str = "image") -> None:
     rgb, _, _ = load_observation(example_dir, load_depth=False, filename_header=filename_header)
     detections = load_detections(example_dir)
